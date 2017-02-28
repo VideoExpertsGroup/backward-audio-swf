@@ -1,0 +1,29 @@
+<html>
+	<head>
+		<title>Example Audio Streaming</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<script type="text/javascript" src="backwardaudio.js?ver=1"></script>
+		<script type="text/javascript">
+			function start(){
+				AudioStreaming.activate(document.getElementById('url').value);
+			}
+		</script>
+	</head>
+	<body>
+		<br>
+		<input type="text" id="url" size="50" value="rtmp://someserver/publish_demo/test_ast"><br><br>
+		<button onclick='start();'>Activate</button>
+		<button onclick='AudioStreaming.deactivate();'>Deactivate</button>
+		<br/>
+		<div>
+			<object id="audio_streaming_swf" type="application/x-shockwave-flash" data="backwardaudio.swf" width="220px" height="160px" >
+				<param name="movie" value="backwardaudio.swf" />
+				<embed src="dist/audio-streaming.swf">
+				<param name="allowScriptAccess" value="always"/>
+				<param value="allowNetworking" value="all"/>
+				<param name="wmode" value="transparent"/>
+				<param name="menu" value="false" />
+			</object>
+		</div>
+	</body>
+</html>
