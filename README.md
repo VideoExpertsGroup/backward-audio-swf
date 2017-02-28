@@ -2,9 +2,9 @@
 
 The simple Flash audio streamer.
 
-How to install npm and grunt in Ubuntu
+How to install npm
 
-	Please look here: https://www.digitalocean.com/community/tutorials/node-js-ubuntu-16-04-ru
+	https://nodejs.org/en/download/package-manager/
 
 Installation
 ============
