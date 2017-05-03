@@ -2,19 +2,18 @@
 	<head>
 		<title>Example Audio Streaming</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-		<script type="text/javascript" src="backwardaudio.js?ver=1"></script>
-		<script type="text/javascript">
-			function start(){
-				AudioStreaming.activate(document.getElementById('url').value);
-			}
-		</script>
+		<link rel="stylesheet" type="text/css" href="index.css?v=1">
+		<script type="text/javascript" src="backwardaudio.js?v=1"></script>
+		<script type="text/javascript" src="index.js?v=1"></script>
+
 	</head>
 	<body>
 		<br>
 		<input type="text" id="url" size="50" value="rtmp://someserver/publish_demo/test_ast"><br><br>
-		<button onclick='start();'>Activate</button>
-		<button onclick='AudioStreaming.deactivate();'>Deactivate</button>
+		<button onclick='adobe_start()'>Activate</button>
+		<button onclick='adobe_stop()'>Deactivate</button>
 		<br/>
+		<h1>Adobe Flash</h1>
 		<div>
 			<object id="audio_streaming_swf" type="application/x-shockwave-flash" data="backwardaudio.swf" width="220px" height="160px" >
 				<param name="movie" value="backwardaudio.swf" />
@@ -24,6 +23,18 @@
 				<param name="wmode" value="transparent"/>
 				<param name="menu" value="false" />
 			</object>
+			<div class="audiolevel">
+				A-LVL
+				<div class="audiolevel-value" id="audiolevel_value"></div>
+			</div>
+			<textarea id="streaming-log" readonly></textarea>
 		</div>
+		
+		
+		<!-- h1>HTML 5 Audio</h1>
+		<button onclick='html5_start();'>Activate</button><br>
+		<div id="html5">
+			<audio style="background: #000"></audio>
+		</div -->
 	</body>
 </html>

@@ -3,11 +3,11 @@ window.AudioStreaming = new function (){
 	this.obj = undefined;
 
 	this.log = function(s){
-		console.log("[AUDIO-STREAMING-JS] " + s);
+		console.log("[AUDIO-STREAMING-JS] ... " + s);
 	}
 
 	this.error = function(s){
-		console.log("[AUDIO-STREAMING-JS] " + s);
+		console.error("[AUDIO-STREAMING-JS] ... " + s);
 	}
 
 	this.startedPublish = function(){
@@ -103,5 +103,4 @@ window.AudioStreaming = new function (){
 	this.isTransitive = function(){
 		return (this.status() == "transitive");
 	};
-	
 }();
