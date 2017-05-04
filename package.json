@@ -1,15 +1,15 @@
 {
   "name": "backwardaudio-swf",
   "description": "BackwardAudioSwf (http://videoexpertsgroup.com)",
-  "version": "1.0.0",
-  "copyright": "Copyright 2015 Video Experts Group, Inc.",
+  "version": "1.0.1",
+  "copyright": "Copyright 2016 VXG, Inc.",
   "keywords": [
     "flash",
     "video",
     "streamer"
   ],
   "homepage": "http://videoexpertsgroup.com",
-  "author": "Video Experts Group",
+  "author": "VXG, Inc.",
   "repository": {
     "type": "git",
     "url": "https://github.com/VideoExpertsGroup/backward-audio-swf"

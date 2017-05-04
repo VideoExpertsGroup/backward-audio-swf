@@ -17,9 +17,9 @@ module.exports = function (grunt) {
           // `-description "http://www.adobe.com/flex"`
           description: 'http:////www.videoexpertsgroup.com/',
           // `-publisher "The Publisher"`
-          publisher: 'Video Experts Group, Inc.',
+          publisher: 'VXG, Inc.',
           // `-creator "The Author"`
-          creator: 'Video Experts Group, Inc.',
+          creator: 'VXG, Inc.',
           // `-language=EN`
           // `-language+=klingon`
           language: 'EN',
@@ -112,7 +112,7 @@ module.exports = function (grunt) {
       },
       backwardaudio_swf: {
         files: {
-          'dist/backwardaudio.swf': ['src/AudioStreaming.as']
+          'dist/backwardaudio.swf': ['src/BackwardAudio.as']
         }
       }
     },

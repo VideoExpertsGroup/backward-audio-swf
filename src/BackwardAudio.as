@@ -33,7 +33,7 @@ package{
     import flash.external.ExternalInterface;
 
     [SWF(backgroundColor="#000000", frameRate="60", width="480", height="270")]
-    public class AudioStreaming extends Sprite{
+    public class BackwardAudio extends Sprite{
 
         public const VERSION:String = CONFIG::version;
 
@@ -48,11 +48,12 @@ package{
         private var _status:String = DEACTIVATED;
         private var _live_mic:Microphone = null;
         private var _soundTrans:SoundTransform = null;
-        private var rtmpConn:String = "";
-        private var rtmpStream:String = "";
+        private var mRtmpConn:String = "";
+        private var mRtmpStream:String = "";
+        private var mCodec:String = "";
         private var _timerActivityLevel:Timer = null;
         
-        public function AudioStreaming(){
+        public function BackwardAudio(){
             Security.allowDomain("*");
             Security.allowInsecureDomain("*");
 
@@ -75,8 +76,8 @@ package{
 				consoleError("ExternalInterface is not available");
 			}
 			
-			var _ctxVersion:ContextMenuItem = new ContextMenuItem("AudioStreaming Flash Component v" + VERSION, false, false);
-			var _ctxAbout:ContextMenuItem = new ContextMenuItem("Copyright © 2015 Video Experts Group, Inc.", false, false);
+			var _ctxVersion:ContextMenuItem = new ContextMenuItem("BackwardAudio Flash Component v" + VERSION, false, false);
+			var _ctxAbout:ContextMenuItem = new ContextMenuItem("Copyright © 2016 VXG, Inc.", false, false);
 			var _ctxMenu:ContextMenu = new ContextMenu();
 			_ctxMenu.hideBuiltInItems();
 			_ctxMenu.customItems.push(_ctxVersion, _ctxAbout);
@@ -89,7 +90,7 @@ package{
 		private function onTickActivityLevel(event:TimerEvent):void{
 			if(_live_mic != null && _status == ACTIVATED){
 				if(ExternalInterface.available){
-					ExternalInterface.call("AudioStreaming.activityLevel", _live_mic.activityLevel);
+					ExternalInterface.call("BackwardAudio.activityLevel", _live_mic.activityLevel);
 				}
 			}
 		}
@@ -97,14 +98,14 @@ package{
 		private function callback_startedPublish():void{
 			consoleLog("publish started");
 			if(ExternalInterface.available){
-				ExternalInterface.call("AudioStreaming.startedPublish");
+				ExternalInterface.call("BackwardAudio.startedPublish");
 			}		
 		}
 
 		private function callback_stoppedPublish():void{
 			consoleLog("publish stopped");
 			if(ExternalInterface.available){
-				ExternalInterface.call("AudioStreaming.stoppedPublish");
+				ExternalInterface.call("BackwardAudio.stoppedPublish");
 			}
 		}
 
@@ -114,19 +115,19 @@ package{
 
 		private function consoleLog(s:String):void{
 			if(ExternalInterface.available){
-				ExternalInterface.call("console.log", "[AUDIO-STREAMING-SWF] " + s);
+				ExternalInterface.call("BackwardAudio.log", "[BACKWARD-AUDIO-SWF] " + s);
 			}
 		}
 		
 		private function consoleWarn(s:String):void{
 			if(ExternalInterface.available){
-				ExternalInterface.call("console.warn", "[AUDIO-STREAMING-SWF] " + s);
+				ExternalInterface.call("BackwardAudio.warn", "[BACKWARD-AUDIO-SWF] " + s);
 			}
 		}
 		
 		private function consoleError(s:String):void{
 			if(ExternalInterface.available){
-				ExternalInterface.call("console.error", "[AUDIO-STREAMING-SWF] " + s);
+				ExternalInterface.call("BackwardAudio.error", "[BACKWARD-AUDIO-SWF] " + s);
 			}
 		}
 
@@ -136,7 +137,7 @@ package{
 				_ns = new NetStream(_nc);
 				_ns.attachAudio(_live_mic);
 				_ns.addEventListener(NetStatusEvent.NET_STATUS, onNetStatusHandler);
-				_ns.publish(rtmpStream);
+				_ns.publish(mRtmpStream);
 				return true;
 			}
 			return false;
@@ -202,8 +203,18 @@ package{
 
 		private function configureMichrophone():void{
 			if(_live_mic != null){
-				// _live_mic.codec = SoundCodec.SPEEX;
-				_live_mic.codec = SoundCodec.PCMA;
+				if(mCodec == "NELLYMOSER"){
+					_live_mic.codec = SoundCodec.NELLYMOSER;
+				}else if(mCodec == "PCMA"){
+					_live_mic.codec = SoundCodec.PCMA;
+				}else if(mCodec == "PCMU"){
+					_live_mic.codec = SoundCodec.PCMU;
+				}else if(mCodec == "SPEEX"){
+					_live_mic.codec = SoundCodec.SPEEX;
+				}else{
+					// default value
+					_live_mic.codec = SoundCodec.SPEEX;
+				}
 				_live_mic.rate = 16;
 
 				_live_mic.setSilenceLevel(0);
@@ -222,7 +233,7 @@ package{
 				changeStatus(DEACTIVATED);
 			}
 			if(ExternalInterface.available){
-				ExternalInterface.call("AudioStreaming.hideSecuritySettings");
+				ExternalInterface.call("BackwardAudio.hideSecuritySettings");
 			}
 		}
 
@@ -232,7 +243,7 @@ package{
 			stage.removeEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_onMouseMove);
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_onMouseMove);
 			if(ExternalInterface.available){
-				ExternalInterface.call("AudioStreaming.showSecuritySettings");
+				ExternalInterface.call("BackwardAudio.showSecuritySettings");
 			}		
 		}
 
@@ -288,14 +299,26 @@ package{
 				changeStatus(TRANSITIVE);
 				_nc = new NetConnection();
 				_nc.addEventListener(NetStatusEvent.NET_STATUS, onNetStatusHandler);
-				_nc.connect(rtmpConn);
-				consoleLog("url: " + rtmpConn + "/" + rtmpStream);
+				_nc.connect(mRtmpConn);
+				consoleLog("url: " + mRtmpConn + "/" + mRtmpStream);
 			}
 		}
 
-		public function activate(rtmpUrl:String):void{
+		public function activate(rtmpUrl:String, codec:String):void{
 			if(status == ACTIVATED || _status == TRANSITIVE)
 				return; // already activated
+
+			if(codec == null || codec == ""){
+				mCodec = "SPEEX";
+				consoleWarn ("Will be used default codec: SPEEX");
+			}else{
+				if(codec != "SPEEX" && codec != "NELLYMOSER" && codec != "PCMA" && codec != "PCMU"){
+					consoleError("Codec must be one of them: SPEEX, NELLYMOSER, PCMA, PCMU (got: " + codec + ")");
+					return;
+				}
+				mCodec = codec;
+			}
+			consoleLog("Will be used codec: " + mCodec);
 
 			var arr:Array = rtmpUrl.split("/");
 
@@ -311,10 +334,10 @@ package{
 				return;
 			}
 
-			rtmpConn = arr[0] + "//" + arr[2] + "/" + arr[3];
-			rtmpStream = arr[4];
+			mRtmpConn = arr[0] + "//" + arr[2] + "/" + arr[3];
+			mRtmpStream = arr[4];
 
-			if(rtmpStream == ""){
+			if(mRtmpStream == ""){
 				consoleError("Stream has not name");
 				changeStatus(DEACTIVATED);
 				return;
@@ -401,8 +424,8 @@ package{
           return this.support;
         }
 
-		private function onActivateCalled(rtmpUrl:* = ""):void{
-            this.activate(String(rtmpUrl));
+		private function onActivateCalled(rtmpUrl:* = "", codec:* = ""):void{
+            this.activate(String(rtmpUrl), codec);
         }
 
         private function onDeactivateCalled():void{

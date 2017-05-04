@@ -23,6 +23,6 @@
 
 #streaming-log{
 	height: 160px;
-	width: 360px;
+	width: calc(100% - 300px);
 	resize: none;
 }
