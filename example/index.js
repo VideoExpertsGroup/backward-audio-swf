@@ -1,22 +1,22 @@
 
 BackwardAudio.log = function(s){
-	document.getElementById('streaming-log').innerHTML += s + "\n";
+	document.getElementById('streaming-log').innerHTML = s + "\n" + document.getElementById('streaming-log').innerHTML;
 }
 
 BackwardAudio.error = function(s){
-	document.getElementById('streaming-log').innerHTML += s + "\n";
+	document.getElementById('streaming-log').innerHTML = s + "\n" + document.getElementById('streaming-log').innerHTML;
 }
 
 BackwardAudio.warn = function(s){
-	document.getElementById('streaming-log').innerHTML += s + "\n";
+	document.getElementById('streaming-log').innerHTML = s + "\n" + document.getElementById('streaming-log').innerHTML;
 }
 
 BackwardAudio.startedPublish = function(){
-	document.getElementById('streaming-log').innerHTML += "Publishing started\n";
+	document.getElementById('streaming-log').innerHTML = "Publishing started\n" + document.getElementById('streaming-log').innerHTML;
 }
 
 BackwardAudio.stoppedPublish = function(){
-	document.getElementById('streaming-log').innerHTML += "Publishing stopped\n";
+	document.getElementById('streaming-log').innerHTML = "Publishing stopped\n" + document.getElementById('streaming-log').innerHTML;
 }
 
 BackwardAudio.activityLevel = function(lvl){
