@@ -25,7 +25,6 @@ BackwardAudio.activityLevel = function(lvl){
 	var h = Math.floor((lvl/100)*140);
 	el.style['height'] = h + "px";
 	el.style['margin-top'] = (140-h)+ "px";
-	
 }
 
 function adobe_start(){

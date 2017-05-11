@@ -51,14 +51,16 @@ package{
         private var mRtmpConn:String = "";
         private var mRtmpStream:String = "";
         private var mCodec:String = "";
+        private var mIsPrivate:Boolean = false;
         private var _timerActivityLevel:Timer = null;
         
         public function BackwardAudio(){
+			consoleLog("BackwardAudio init " + Security.sandboxType);
+			
             Security.allowDomain("*");
             Security.allowInsecureDomain("*");
 
             if (ExternalInterface.available){
-				consoleLog("Init");
 				try{
 					ExternalInterface.addCallback("vjs_support", onSupportCalled);
 					ExternalInterface.addCallback("vjs_activate", onActivateCalled);
@@ -95,39 +97,25 @@ package{
 			}
 		}
 
-		private function callback_startedPublish():void{
-			consoleLog("publish started");
-			if(ExternalInterface.available){
-				ExternalInterface.call("BackwardAudio.startedPublish");
-			}		
-		}
-
-		private function callback_stoppedPublish():void{
-			consoleLog("publish stopped");
-			if(ExternalInterface.available){
-				ExternalInterface.call("BackwardAudio.stoppedPublish");
-			}
-		}
-
 		public function get support():Boolean{
 			return Microphone.isSupported;
 		}
 
 		private function consoleLog(s:String):void{
 			if(ExternalInterface.available){
-				ExternalInterface.call("BackwardAudio.log", "[BACKWARD-AUDIO-SWF] " + s);
+				ExternalInterface.call("BackwardAudio.log", "BackwardAudio log: " + s);
 			}
 		}
 		
 		private function consoleWarn(s:String):void{
 			if(ExternalInterface.available){
-				ExternalInterface.call("BackwardAudio.warn", "[BACKWARD-AUDIO-SWF] " + s);
+				ExternalInterface.call("BackwardAudio.warn", "BackwardAudio warn: " + s);
 			}
 		}
 		
 		private function consoleError(s:String):void{
 			if(ExternalInterface.available){
-				ExternalInterface.call("BackwardAudio.error", "[BACKWARD-AUDIO-SWF] " + s);
+				ExternalInterface.call("BackwardAudio.error", "BackwardAudio error: " + s);
 			}
 		}
 
@@ -146,7 +134,7 @@ package{
 		private function onMicStatus(evt:StatusEvent):void{
 			switch (evt.code) {
 				case "Microphone.Unmuted":
-					consoleLog("Microphone access was allowed");
+					consoleLog("User allow use microphone");
 					if(_nc == null){
 						initConn();
 						break;
@@ -155,7 +143,7 @@ package{
 						changeStatus(DEACTIVATED);
 					break;
 				case "Microphone.Muted":
-					consoleLog("Microphone access was denied.");
+					consoleError("User deny use microphone");
 					changeStatus(TRANSITIVE);
 					ncClose();
 					changeStatus(DEACTIVATED);
@@ -190,13 +178,15 @@ package{
 		private function changeStatus(newVal:String): void{
 			if (_status != newVal){
 				_status = newVal;
-				consoleLog(_status);
+				consoleLog("Status: " + _status);
 				if(_status == DEACTIVATED){
 					ncClose();
-					callback_stoppedPublish();
+					consoleLog("BackwardAudio publish stopped");
+					callback("BackwardAudio.stoppedPublish");
 				}
 				if(_status == ACTIVATED){
-					callback_startedPublish();
+					consoleLog("BackwardAudio publish started");
+					callback("BackwardAudio.startedPublish");
 				}
 			}
 		}
@@ -225,54 +215,66 @@ package{
 		}
 
 		private function showSecuritySettings_onMouseMove(e:Event):void{
+			consoleLog("Hide security settings 2");
+			callback("BackwardAudio.hideSecuritySettings");
 			//REMOVE THE LISTENER ON FIRST TIME
 			stage.removeEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_onMouseMove);
-			consoleLog("hide security settings 2");
 			_live_mic.removeEventListener(StatusEvent.STATUS, onMicStatus);
 			if(_live_mic != null && _live_mic.muted == true){
 				changeStatus(DEACTIVATED);
+			}else if(_live_mic == null){
+				changeStatus(DEACTIVATED);
 			}
+		}
+
+		private function callback(event:String):void{
 			if(ExternalInterface.available){
-				ExternalInterface.call("BackwardAudio.hideSecuritySettings");
+				ExternalInterface.call(event);
 			}
 		}
 
 		private function showSecuritySettings():void{
-			consoleLog("show security settings");
-			Security.showSettings(SecurityPanel.PRIVACY);
+			consoleLog("Show security settings");
+			if(mIsPrivate){
+				Security.showSettings(SecurityPanel.MICROPHONE);
+			}else{
+				Security.showSettings(SecurityPanel.PRIVACY);
+			}
 			stage.removeEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_onMouseMove);
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_onMouseMove);
-			if(ExternalInterface.available){
-				ExternalInterface.call("BackwardAudio.showSecuritySettings");
-			}		
+			callback("BackwardAudio.showSecuritySettings");
 		}
 
 		private function onNetStatusHandler(e:NetStatusEvent):void{
             switch(e.info.code){
                 case "NetConnection.Connect.Success":
+					consoleLog("NetConnection.Connect.Success");
 					if(_live_mic == null){
+						consoleLog("Get microphone 2");
 						_live_mic = Microphone.getEnhancedMicrophone();
 						if(_live_mic == null){
 							changeStatus(DEACTIVATED);
 							return;
 						}
 						configureMichrophone();
-						showSecuritySettings();		
+						showSecuritySettings();
 						_live_mic.addEventListener(StatusEvent.STATUS, onMicStatus);
 					}else{
-						consoleLog("Microphone access was  " + (_live_mic.muted ? "denied" : "allowed."));
 						if(_live_mic.muted == true){
-							showSecuritySettings();
+							consoleError("Microphone access was denied");
 							_live_mic = Microphone.getEnhancedMicrophone();
 							if(_live_mic == null){
 								changeStatus(DEACTIVATED);
 								return;
 							}
+							showSecuritySettings();
 							configureMichrophone();
 							_live_mic.addEventListener(StatusEvent.STATUS, onMicStatus);
 						}else{
-							if(!startPublish())
+							consoleLog("Microphone access was allowed");
+							if(!startPublish()){
 								changeStatus(DEACTIVATED);
+							}
 						}	
 					}
                     break;
@@ -304,10 +306,11 @@ package{
 			}
 		}
 
-		public function activate(rtmpUrl:String, codec:String):void{
+		public function activate(rtmpUrl:String, isPrivate:Boolean, codec:String):void{
 			if(status == ACTIVATED || _status == TRANSITIVE)
 				return; // already activated
-
+			
+			mIsPrivate = isPrivate;
 			if(codec == null || codec == ""){
 				mCodec = "SPEEX";
 				consoleWarn ("Will be used default codec: SPEEX");
@@ -329,7 +332,7 @@ package{
 			}
 
 			if(arr[0] != "rtmp:"){
-				consoleError("expected rtmp protocol");
+				consoleError("Expected rtmp protocol");
 				changeStatus(DEACTIVATED);
 				return;
 			}
@@ -344,13 +347,14 @@ package{
 			}
 			ncClose();
 			if(_live_mic == null){
+				consoleLog("Get microphone on activate");
+				showSecuritySettings();
 				_live_mic = Microphone.getEnhancedMicrophone();
 				if(_live_mic == null){
 					changeStatus(DEACTIVATED);
 					return;
 				}
 				configureMichrophone();
-				showSecuritySettings();
 			}else if(_live_mic.muted == true){
 				showSecuritySettings();
 			}
@@ -392,7 +396,6 @@ package{
         }*/
 
         private function onGetPropertyCalled(pPropertyName:String = ""):*{
-
             switch(pPropertyName){
                 case "support":
                     // nothing
@@ -424,8 +427,8 @@ package{
           return this.support;
         }
 
-		private function onActivateCalled(rtmpUrl:* = "", codec:* = ""):void{
-            this.activate(String(rtmpUrl), codec);
+		private function onActivateCalled(rtmpUrl:* = "", isPrivate:* = false, codec:* = ""):void{
+            this.activate(String(rtmpUrl), Boolean(isPrivate), String(codec));
         }
 
         private function onDeactivateCalled():void{
