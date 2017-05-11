@@ -52,13 +52,19 @@ package{
         private var mRtmpStream:String = "";
         private var mCodec:String = "";
         private var mIsPrivate:Boolean = false;
+        private var mShowedSecurityDialog:Boolean = false;
         private var _timerActivityLevel:Timer = null;
+        private var mTimerPolingAllowChrome:Timer = null;
         
         public function BackwardAudio(){
 			consoleLog("BackwardAudio init " + Security.sandboxType);
-			
+
             Security.allowDomain("*");
             Security.allowInsecureDomain("*");
+			
+			if(!checkMicrophoneAllowedChrome()){
+				consoleWarn("Microphone deny");
+			}
 
             if (ExternalInterface.available){
 				try{
@@ -214,11 +220,105 @@ package{
 			}
 		}
 
-		private function showSecuritySettings_onMouseMove(e:Event):void{
-			consoleLog("Hide security settings 2");
+		private function callback(event:String):void{
+			if(ExternalInterface.available){
+				ExternalInterface.call(event);
+			}
+		}
+		
+		private function isEmptyString(s:String):Boolean{
+			if(s == null){
+				return true;
+			}else if (s == "" || s == " "){
+				return true;
+			}
+			return false;
+		}
+
+		private function checkMicrophoneAllowedChrome():Boolean{
+			var nCountEmptyNames:Number = 0;
+			var nCountMicrophones:Number = Microphone.names.length;
+			for(var i = 0; i < nCountMicrophones; i++){
+				if(isEmptyString(Microphone.names[i])){
+					nCountEmptyNames = nCountEmptyNames + 1;
+				}
+			}
+			return nCountMicrophones > 0 && nCountEmptyNames < nCountMicrophones;
+		}
+
+		private function stopPolingAllowMicrophoneInChrome():void{
+			consoleLog("stopPolingAllowMicrophoneInChrome");
+			if(mTimerPolingAllowChrome != null){
+				mTimerPolingAllowChrome.stop();
+				mTimerPolingAllowChrome = null;
+			}
+		}
+
+		private function startPolingAllowMicrophoneInChrome():void{
+			stopPolingAllowMicrophoneInChrome();
+
+			consoleLog("startPolingAllowMicrophoneInChrome");
+			mTimerPolingAllowChrome = new Timer(1000);
+			mTimerPolingAllowChrome.addEventListener(TimerEvent.TIMER, onPolingAllowMicrophoneInChrome);
+			mTimerPolingAllowChrome.start();
+		}
+		
+		private function onPolingAllowMicrophoneInChrome(event:TimerEvent):void{
+			consoleLog("onPolingAllowMicrophoneInChrome");
+			if(checkMicrophoneAllowedChrome()){
+				_live_mic = Microphone.getEnhancedMicrophone();
+				showSecuritySettings();
+				stopPolingAllowMicrophoneInChrome();
+			}
+		}
+		
+		private function showSecuritySettings():void{
+			consoleLog("Show security settings");
+			if(!checkMicrophoneAllowedChrome()){
+				consoleError("Not allowed in browser (chrome)");
+				if(_live_mic != null){
+					startPolingAllowMicrophoneInChrome();
+					return;
+				}else{
+					consoleError("Microphone is empty");
+				}
+			}
+			stopPolingAllowMicrophoneInChrome();
+			
+			if(mShowedSecurityDialog){
+				consoleWarn("Already showed security dialog");
+				return;
+			}
+			mShowedSecurityDialog = true;
+			
+			consoleLog("Show security settings adobe");
+			if(mIsPrivate){
+				// Security.showSettings(SecurityPanel.PRIVACY);
+				Security.showSettings(SecurityPanel.MICROPHONE);
+			}else{
+				Security.showSettings(SecurityPanel.PRIVACY);
+			}
+			stage.removeEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_Closed);
+			stage.addEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_Closed);
+			callback("BackwardAudio.showSecuritySettings");
+		}
+
+		private function showSecuritySettings_Closed(e:Event):void{
+			consoleLog("showSecuritySettings_Closed");
+			if(mIsPrivate && _live_mic != null && _live_mic.muted == true){
+				// mShowedSecurityDialog = false;
+				consoleWarn("Reopen security settings");
+				Security.showSettings(SecurityPanel.PRIVACY);
+				Security.showSettings(SecurityPanel.MICROPHONE);
+				// showSecuritySettings();
+				return;
+			}
+
+			consoleLog("Hide security settings");
 			callback("BackwardAudio.hideSecuritySettings");
+			mShowedSecurityDialog = false;
 			//REMOVE THE LISTENER ON FIRST TIME
-			stage.removeEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_onMouseMove);
+			stage.removeEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_Closed);
 			_live_mic.removeEventListener(StatusEvent.STATUS, onMicStatus);
 			if(_live_mic != null && _live_mic.muted == true){
 				changeStatus(DEACTIVATED);
@@ -226,25 +326,7 @@ package{
 				changeStatus(DEACTIVATED);
 			}
 		}
-
-		private function callback(event:String):void{
-			if(ExternalInterface.available){
-				ExternalInterface.call(event);
-			}
-		}
-
-		private function showSecuritySettings():void{
-			consoleLog("Show security settings");
-			if(mIsPrivate){
-				Security.showSettings(SecurityPanel.MICROPHONE);
-			}else{
-				Security.showSettings(SecurityPanel.PRIVACY);
-			}
-			stage.removeEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_onMouseMove);
-			stage.addEventListener(MouseEvent.MOUSE_MOVE, showSecuritySettings_onMouseMove);
-			callback("BackwardAudio.showSecuritySettings");
-		}
-
+		
 		private function onNetStatusHandler(e:NetStatusEvent):void{
             switch(e.info.code){
                 case "NetConnection.Connect.Success":
@@ -346,16 +428,20 @@ package{
 				return;
 			}
 			ncClose();
+				
 			if(_live_mic == null){
 				consoleLog("Get microphone on activate");
-				showSecuritySettings();
 				_live_mic = Microphone.getEnhancedMicrophone();
+				_live_mic.addEventListener(StatusEvent.STATUS, onMicStatus);
 				if(_live_mic == null){
+					// TODO callback could not get mic
 					changeStatus(DEACTIVATED);
 					return;
 				}
 				configureMichrophone();
+				showSecuritySettings();	
 			}else if(_live_mic.muted == true){
+				configureMichrophone();
 				showSecuritySettings();
 			}
 			initConn();

@@ -128,6 +128,10 @@ BackwardAudio.private.isIE10OrLater = function(user_agent) {
     if (match && parseInt(match[1], 10) >= 10) {
         return true;
     }
+    var edge = /edge/.exec(ua);
+	if(edge && edge[0] == "edge"){
+		return true;
+	}
     return false;
 }
 
@@ -165,7 +169,7 @@ BackwardAudio.private.detectPrivateMode = function(callback) {
                 }
             );
         }
-    } else if (isIE10OrLater(window.navigator.userAgent)) {
+    } else if (BackwardAudio.private.isIE10OrLater(window.navigator.userAgent)) {
         is_private = false;
         try {
             if (!window.indexedDB) {
